@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         String   @default("CUSTOMER")
+  phone        String?
+  createdAt    DateTime @default(now())
+  store        Store?
+  cart         Cart?
+  orders       Order[]
+}
+
+model Store {
+  id          String    @id @default(cuid())
+  ownerId     String    @unique
+  owner       User      @relation(fields: [ownerId], references: [id])
+  name        String
+  slug        String    @unique
+  description String
+  city        String
+  bannerUrl   String?
+  status      String    @default("ACTIVE")
+  createdAt   DateTime  @default(now())
+  products    Product[]
+  orders      Order[]
+}
+
+model Category {
+  id       String    @id @default(cuid())
+  name     String
+  slug     String    @unique
+  products Product[]
+}
+
+model Product {
+  id             String         @id @default(cuid())
+  storeId        String
+  store          Store          @relation(fields: [storeId], references: [id])
+  categoryId     String
+  category       Category       @relation(fields: [categoryId], references: [id])
+  name           String
+  slug           String         @unique
+  description    String
+  price          Int
+  compareAtPrice Int?
+  stock          Int
+  status         String         @default("ACTIVE")
+  createdAt      DateTime       @default(now())
+  images         ProductImage[]
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+
+  @@index([storeId])
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  position  Int
+}
+
+model Cart {
+  id     String     @id @default(cuid())
+  userId String     @unique
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items  CartItem[]
+}
+
+model CartItem {
+  id        String  @id @default(cuid())
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+
+  @@unique([cartId, productId])
+}
+
+model Order {
+  id            String      @id @default(cuid())
+  code          String      @unique
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  storeId       String
+  store         Store       @relation(fields: [storeId], references: [id])
+  status        String      @default("PENDING")
+  paymentMethod String      @default("COD")
+  paymentStatus String      @default("PENDING")
+  subtotal      Int
+  deliveryFee   Int
+  total         Int
+  customerName  String
+  phone         String
+  city          String
+  address       String
+  createdAt     DateTime    @default(now())
+  items         OrderItem[]
+
+  @@index([userId])
+  @@index([storeId])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  price     Int
+  quantity  Int
+}
